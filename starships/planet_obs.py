@@ -789,7 +789,7 @@ class Observations():
                  tellu=np.array([]), uncorr=np.array([]), 
                  name='', path='',filenames=[], planet=None, CADC=False, pl_kwargs=None, instrument='SPIRou-APERO'):
         
-        self.name = name
+        self.name = name  # planet name
         self.path = Path(path)
         
         # --- Get the system parameters from the ExoFile
@@ -824,7 +824,7 @@ class Observations():
                     list_tcorr='list_tellu_corrected', list_recon='list_tellu_recon',
                     read_sp=None, **kwargs):
         """
-        Retrieve all the relevent data in path 
+        Retrieve all the relevant data in path 
         (tellu corrected, tellu recon and uncorrected spectra from lists of files)
         Georgia Mraz--debugged CADC function on May 22nd 2024
         """

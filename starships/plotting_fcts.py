@@ -2608,3 +2608,88 @@ def scatterplot_logl(flatten_sample, flatten_logl, n_max_pts=10000, tight_ylim=T
     
     return fig, ax
 
+
+def plot_raw_spectrum(observation, wv_range, visit_name, exp_idx=10, use_median=True, ylims=None):
+    """
+    Plot 1D raw and telluric‑corrected spectra for a single night.
+
+    Parameters
+    ----------
+    observation
+        'tr' object produced by pl_obs.load_single_sequences.
+    wv_range
+        Wavelength range (min_wl, max_wl), in microns, to display along the x‑axis.
+    visit_name
+        Name of the night of observation.
+    exp_idx
+        Index of the exposure to plot when use_median=False (default: 10).
+        Ignored if use_median=True.
+    use_median
+        If True (default), the median spectrum over all exposures is plotted.
+        If False, a single exposure given by exp_idx is plotted.
+    ylims
+        y-axis range (ymin, ymax) for the plot.
+        If None (default), the limits are based on the extent of the data.
+
+    Notes
+    -----
+    The flux is first corrected for the blaze function in each order.
+    The individual orders are then concatenated to form a spectrum so that
+    overlapping regions can be inspected visually.
+    This function does not modify the data in any way.
+    Created by Mathis B (May 2025).
+    """
+
+    # ----------------------- sanity checks ----------------------------- #
+    if wv_range[0] >= wv_range[1]:
+        raise ValueError("wavelength_range must be (min, max) with min < max.")
+
+    if not use_median and not (0 <= exp_idx < observation.uncorr.shape[0]):
+        raise IndexError("exp_idx is out of bounds for the number of exposures.")
+
+    # -------------------- blaze‑function correction -------------------- #
+    # Divide by the blaze to get a spectrum normalized at 1
+    blaze_norm = observation.blaze / np.nanmax(observation.blaze, axis=-1, keepdims=True)
+    uncorrected_flux = observation.uncorr / blaze_norm
+
+    # ------------------ build 1‑D concatenated spectra ----------------- #
+    order_indices = np.arange(observation.nord)  # array with all the orders
+
+    # Concatenate wavelength values across orders
+    wavelength = np.concatenate([observation.wv[i] for i in order_indices])
+
+    if use_median:
+        # Median across exposures, order by order
+        flux_uncorrected = np.concatenate([np.nanmedian(uncorrected_flux, axis=0)[i] for i in order_indices])
+        flux_corrected = np.concatenate([np.nanmedian(observation.flux, axis=0)[i] for i in order_indices])
+    else:
+        flux_uncorrected = np.concatenate([uncorrected_flux[exp_idx, i] for i in order_indices])
+        flux_corrected = np.concatenate([observation.flux[exp_idx, i] for i in order_indices])
+
+    # --------------------------- plotting ------------------------------ #
+    mask = (wv_range[0] < wavelength) & (wavelength < wv_range[1])  # mask for wavelength range
+
+    fig, ax = plt.subplots(figsize=(11, 4))
+    ax.scatter(wavelength[mask], flux_uncorrected[mask], s=1.2, c="k", label="Uncorrected flux")
+    ax.scatter(wavelength[mask], flux_corrected[mask], s=1.2, c="#48ACF0", label="Telluric‑corrected flux")
+
+    ax.set_xlabel("Wavelength [μm]", fontsize=13)
+    ax.set_ylabel("Flux", fontsize=13)
+
+    # Plot title
+    if use_median:
+        title = f"Raw spectrum: {visit_name} (median of exposures)"
+    else:
+        title = f"Raw spectrum: {visit_name} (exposure {exp_idx})"
+    
+    # Set limits for the y axis
+    if ylims is not None:
+        ax.set_ylim(ylims)
+    
+    ax.set_title(title, fontsize=14)
+    ax.legend(fontsize=12)
+    ax.tick_params(axis='both', which='major', labelsize=12)
+
+    plt.tight_layout()
+    plt.show()
+
