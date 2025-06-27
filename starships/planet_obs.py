@@ -218,6 +218,7 @@ def fits2wavenew(image, hdr):
     # return wave grid
     return wavesol
 
+
 def val_cheby(coeffs, xvector,  domain):
     """
     Using the output of fit_cheby calculate the fit to x  (i.e. y(x))
@@ -350,6 +351,7 @@ def read_all_sp_spirou_CADC(path, filename, file_list):
     return headers_princ, headers_image, headers_tellu, np.array(wv), \
             np.array(count), np.array(blaze), np.array(recon), filenames
 
+
 def read_all_sp_nirps_apero_CADC(path,filename,file_list):
     
     """
@@ -392,6 +394,7 @@ def read_all_sp_nirps_apero_CADC(path,filename,file_list):
     
     return headers_princ, headers_image, headers_tellu, np.array(wv), \
             np.array(count), np.array(blaze), np.array(recon), filenames
+
 
 def read_all_sp_igrins(path, file_list, blaze_path=None, input_type='data'):
 
@@ -532,6 +535,7 @@ def read_all_sp_nirps_apero(path, file_list, wv_default=None, blaze_default=None
             wv.append(wvsol / 1000)
 
     return headers, np.array(wv), np.array(count), np.array(blaze), filenames
+
 
 def read_all_sp_nirps_geneva(path, file_list, wv_default=None, blaze_default=None,
                              blaze_path=None, debug=False, cheby=False):
@@ -684,7 +688,7 @@ def gen_transit_model(self, p, kind_trans, coeffs, ld_model, iin=False, plot=Fal
         T0 = p.mid_tr + 0.5 * p.period.to(u.d)
         z = None
     
-    print(p.mid_tr)
+    # print(p.mid_tr)
     
     i_peri = np.searchsorted(self.t, p.mid_tr)
 
@@ -696,7 +700,7 @@ def gen_transit_model(self, p, kind_trans, coeffs, ld_model, iin=False, plot=Fal
     
         
     if kind_trans == 'transmission':
-        print('Transmission')
+        # print('Transmission')
         self.iOut = out
         self.part = part
         self.total = total
@@ -704,7 +708,7 @@ def gen_transit_model(self, p, kind_trans, coeffs, ld_model, iin=False, plot=Fal
     #             print(self.iIn.size, self.iOut.size)
 
     elif kind_trans == 'emission':
-        print('Emission')
+        # print('Emission')
         self.iOut = total
         self.part = part
         self.total = out
@@ -753,10 +757,11 @@ def gen_transit_model(self, p, kind_trans, coeffs, ld_model, iin=False, plot=Fal
         ax[0].set_ylabel('Airmass')
         # ax[1].set_ylabel('ADC1 angle')
         ax[1].set_xticks(np.array(self.t), np.arange(1, np.shape(self.t)[0] + 1))
-        ax[1].set_xlabel("Exposition")
+        ax[1].set_xlabel("Exposure")
         ax[1].set_ylabel('Mean SNR')
         ax[0].legend()
         ax[1].legend()
+        plt.show()
 
     self.alpha = hm.calc_tr_lightcurve(p, coeffs, self.t, T0, ld_model=ld_model, kind_trans=kind_trans)
     #         self.alpha = np.array([(hm.circle_overlap(p.R_star.to(u.m), p.R_pl.to(u.m), sep) / \
@@ -848,7 +853,7 @@ class Observations():
                 log.info("Fetching the uncorrected spectra")
                 _, _, _, _, count_uncorr, blaze_uncorr, _, filenames_uncorr = read_all_sp_spirou_CADC(path, list_e2ds, 'list_e2ds')
 
-            if self.instrument_name == 'NIRPS-APERO':
+            elif self.instrument_name == 'NIRPS-APERO':
                 headers, headers_image, headers_tellu, \
                 wave, count, blaze, tellu, filenames = read_all_sp_nirps_apero_CADC(path, list_tcorr, 'list_tellu_corrected')
 
@@ -1021,7 +1026,7 @@ class Observations():
             else:
                 # print('CADC correct')
                 
-                print((self.headers_image.get_all('EXTSN002')))
+                # print((self.headers_image.get_all('EXTSN002')))
                 
                 
 #                 obs_date = [date+' '+hour for date,hour in zip(self.headers_image.get_all('DATE-OBS')[0], \
@@ -1307,7 +1312,7 @@ class Observations():
         
 
         if (self.noise is None) or (change_noise is True):
-            print('Calculating noise with {} PCs'.format(params[5]))
+            hm.print_static('Calculating noise with {} PCs'.format(params[5]))
             self.sig_col = np.ma.std(self.final, axis=0)[None,:,:]  #self.final  # self.spec_trans
             self.noise = self.sig_col*self.scaling
         
@@ -1320,17 +1325,17 @@ class Observations():
             self.RV_sys = RV
             
         self.berv = -self.berv0
-        self.mid_id = int(np.ceil(self.n_spec/2)-1)
+        self.mid_id = int(np.ceil(self.n_spec / 2) - 1)
         self.mid_berv = self.berv[self.mid_id]
         self.mid_vr = self.vr[self.mid_id].value
         self.mid_vrp = self.vrp[self.mid_id].value
 
-        self.berv = (self.berv-self.berv[self.mid_id])
-        self.vr = (self.vr-self.vr[self.mid_id]).to(u.km / u.s).value
-        self.vrp = (self.vrp-self.vrp[self.mid_id]).to(u.km / u.s).value
-        self.planet.RV_sys=0*u.km/u.s
+        self.berv = self.berv - self.mid_berv
+        self.vr = (self.vr - self.vr[self.mid_id]).to(u.km / u.s).value
+        self.vrp = (self.vrp - self.vrp[self.mid_id]).to(u.km / u.s).value
+        self.planet.RV_sys = 0*u.km/u.s
 
-        self.RV_const = self.mid_berv+self.mid_vr+self.RV_sys
+        self.RV_const = self.mid_berv + self.mid_vr + self.RV_sys
 
 
 #         self.build_trans_spec(**kwargs)
@@ -2302,6 +2307,7 @@ def save_sequences(filename, list_tr, do_tr, path='', bad_indexs=None, save_all=
     for i_tr, tr_key in enumerate(list(list_tr.keys())[:np.nonzero(np.array(do_tr) < 10)[0].size]):
         out_filename = Path(f'{filename.name}_data_trs_{i_tr}.npz')
         print(path / out_filename)
+        print("-------------------------\n")
         if save_all is False:
             np.savez(path / out_filename,
                  components_ = list_tr[tr_key].pca.components_,

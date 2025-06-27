@@ -45,7 +45,7 @@ interp1d_masked.iprint = False
 
 
 def gauss(x, mean=0, sigma=1, FWHM=None):
-       
+    
     if FWHM is not None:
         sigma = fwhm2sigma(FWHM)  # FWHM / (2 * np.sqrt(2 * np.log(2)))
         

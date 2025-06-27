@@ -20,7 +20,10 @@ def plot_scaled_model(wave_mod, mod_spec, mod_spec_scaled, path_fig):
 def main(config_dict, p, obs, visit_name, wave_mod, mod_spec, scratch_dir = None, path_fig = '', debug = False):
 
     ''' Takes as input a model and a raw data file to inject the model into at a given RV.
-    Assumed a list of t.fits files for the night have already been made (so, that split nights has been run '''
+    Assumed a list of t.fits files for the night have already been made (so, that split nights has been run
+    
+    wave_mod and mod_spec: outputs of petitradtrans model -- mod_spec should be in units of transit depth (R_pl/R_star)**2
+    '''
 
     # set save directory
     if scratch_dir == None:
@@ -40,28 +43,21 @@ def main(config_dict, p, obs, visit_name, wave_mod, mod_spec, scratch_dir = None
     # create the window function to scale the model 
     Wc = lightcurve / np.max(lightcurve)
 
-    # getting velocities for correction after
-    v_sys = p.RV_sys
-    v_orb = obs.vrp
-    berv = obs.berv
+    # Getting velocities for correction after
+    obs.norv_sequence(RV=obs.planet.RV_sys.value[0])  # offset the RVs so that they are 0 at mid-transit
+    
+    # Calculate the velocity shift correction
+    vshift = -obs.berv0 + obs.RV_sys + obs.vrp + obs.mid_vrp + config_dict['RV_inj']
 
     # Scale the inputted model
-    mod_spec_scaled = (mod_spec - (p.R_pl / p.R_star)**2)* config_dict['scaling_factor']
+    mod_spec_scaled = (mod_spec - (p.R_pl / p.R_star)**2) * config_dict['scaling_factor']
 
     # save a plot of the scaled model
     plot_scaled_model(wave_mod, mod_spec, mod_spec_scaled, path_fig)
 
-    # shift the wavelength into the observer rest frame
-    v_shift = v_orb[0].value + v_sys.value + config_dict['RV_inj'] + berv[0]
-    wave_mod_shifted = wave_mod * (1 + v_shift / 299792.458)
-
-    # setup a funciton to interpolate over the model
-    interp_wavelength = interp1d(wave_mod_shifted, mod_spec_scaled, kind='cubic')
-
     # get list of all exposures
-    with open(str(config_dict['obs_dir'])+'/'+f'list_tcorr_{visit_name}') as f:
+    with open(str(config_dict['obs_dir']) + '/' + f'list_tcorr_{visit_name}') as f:
         exp_list = f.readlines()
-
 
     # Initialize lists to store data
     wavelengths = []
@@ -69,9 +65,8 @@ def main(config_dict, p, obs, visit_name, wave_mod, mod_spec, scratch_dir = None
 
     for i, exp in enumerate(exp_list):
         
-        # shift the model wavelength into the observer rest frame for this exposure
-        v_shift = v_orb[i].value + v_sys.value + config_dict['RV_inj'] + berv[i]
-        wave_mod_shifted = wave_mod * (1 + v_shift / 299792.458)
+        # Shift the model wavelength into the observer rest frame for this exposure
+        wave_mod_shifted = wave_mod * (1 + vshift[i] / 299792.458)
 
         # setup a funciton to interpolate over the model
         interp_wavelength = interp1d(wave_mod_shifted, mod_spec_scaled, kind='cubic')
@@ -81,49 +76,51 @@ def main(config_dict, p, obs, visit_name, wave_mod, mod_spec, scratch_dir = None
             plt.figure(figsize = (10, 4), dpi = 200)
         
         # load the exposure
-        hdul = fits.open(str(config_dict['obs_dir'])+'/'+exp.strip())
+        with fits.open(str(config_dict['obs_dir']) + '/' + exp.strip(), memmap=False) as hdul:
 
-        count = hdul[1].data
-        wv = hdul[2].data / 1000
-        
-        # iterate over the wavelength bits
-        for w in range(len(wv)):
-
-            if debug:
-                # plot original 
-                if w == 0: plt.plot(wv[w], count[w], label='Original')
-                else: plt.plot(wv[w], count[w])
+            count = hdul[1].data
+            wv = hdul[2].data / 1000
             
-            # interpolate the model to the wavelength, and scale by the lightcurve
-            mod_interp = 1 - interp_wavelength(wv[w]) * Wc[i]
+            new_count = count.copy()  # create a copy to modify
 
-            # multiply the count by the model in that range
-            new_count = count[w] * mod_interp
+            # Iterate over the orders
+            for w in range(len(wv)):
 
-            # update the count
-            hdul[1].data[w] = new_count
-        
+                if debug:
+                    # plot original 
+                    if w == 0: plt.plot(wv[w], count[w], label='Original')
+                    else: plt.plot(wv[w], count[w])
+
+                # interpolate the model to the wavelength, and scale by the lightcurve
+                mod_interp = 1 - interp_wavelength(wv[w]) * Wc[i]
+
+                # multiply the count by the model in that range
+                new_count[w] = count[w] * mod_interp
+
+                if debug:
+                    # plot new
+                    if w == 0: plt.plot(wv[w], hdul[1].data[w], label='Injected', color = 'blue', zorder = 0)
+                    else: plt.plot(wv[w], hdul[1].data[w], color = 'blue', zorder = 0)
+
+            # Assign the modified data back to the HDU
+            hdul[1].data = new_count
+            
+            # save to new fits file with same name, in new folder
+            hdul.writeto(str(scratch_dir / exp.strip()), overwrite=True)
+
+            # Append wavelengths and counts for this exposure to the lists
+            wavelengths.append(wv)
+            counts.append(hdul[1].data)
+
             if debug:
-                # plot new
-                if w == 0: plt.plot(wv[w], hdul[1].data[w], label='Injected', color = 'blue', zorder = 0)
-                else: plt.plot(wv[w], hdul[1].data[w], color = 'blue', zorder = 0)
-                
-        # save to new fits file with same name, in new folder
-        hdul.writeto(str(scratch_dir / exp.strip()), overwrite=True)
-
-        # Append wavelengths and counts for this exposure to the lists
-        wavelengths.append(wv)
-        counts.append(hdul[1].data)
-        
-        if debug:
-            plt.title(f'Exposure {exp.strip()}')
-            plt.legend()
-            plt.savefig(str(scratch_dir / 'wavelength_time_plot.pdf'))
-            # plt.show()
+                plt.title(f'Exposure {exp.strip()}')
+                plt.legend()
+                plt.savefig(str(scratch_dir / 'wavelength_time_plot.pdf'))
+                # plt.show()
 
     # copy rest of files into scratch so we can use it as a new obs_dir
     # get list of all exposures
-    with open(str(config_dict['obs_dir'])+'/'+f'list_e2ds_{visit_name}') as f:
+    with open(str(config_dict['obs_dir']) + '/' + f'list_e2ds_{visit_name}') as f:
         e2ds_list = f.readlines()
 
     for i, e2ds in enumerate(e2ds_list):

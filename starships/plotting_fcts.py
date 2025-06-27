@@ -981,6 +981,8 @@ def plot_steps(tr, iord, xlim=None, masking_limit=None, id_spec=0, fig_name='',
         ax4.set_xlim(*xlim)
         
     fig.subplots_adjust(hspace=0)
+    plt.show()
+    
     if path_fig is not None:
         fig.savefig(path_fig+'fig_STEPS'+fig_name+'.pdf')
 
@@ -1372,7 +1374,8 @@ def plot_ttest_map(tr, Kp_array, RV_array, sigma, p_value):
     y = nf.pval2sigma(p_value)[hm.nearest(Kp_array, tr.Kp.value)][(RV_array >= -15) & (RV_array <= 15)]
     chose = a.find_max_spline(x, np.ma.masked_invalid(y.copy()) , kind='max')
     print('Sigma : Max value = {:.2f} // Max position = {:.2f}'.format(-chose[1], chose[0]))
-
+    
+    plt.show()
     
     return -chose[1], chose[0]
 
@@ -1380,7 +1383,7 @@ def plot_ttest_map(tr, Kp_array, RV_array, sigma, p_value):
 def plot_ttest_map_hist(tr, corrRV, correlation, Kp_array, RV_array, sigma, ttest_params, ccf=None,
                         orders=np.arange(49), masked=False, logl=False, plot_trail=False, show_max=True,
                         show_rest_frame=True, Kp=None, RV=None, vrp=None, fig_name='',
-                        path_fig=None, hist=True, cmap=None, tellu_loc=None):
+                        path_fig=None, hist=True, cmap=None):
     
     '''
     Plot Kp/Vrad map, T-test and Trail.
@@ -1405,29 +1408,22 @@ def plot_ttest_map_hist(tr, corrRV, correlation, Kp_array, RV_array, sigma, ttes
         divider = make_axes_locatable(ax[0])
         cax = divider.append_axes('right', size='3%', pad=0.05)
         cbar = fig.colorbar(im0, ax=ax[0], cax=cax)
-        cbar.set_label(r'$t$-test $\sigma$', fontsize=16)#, color='white')  ##################################### MATHIS CHANGE THIS BACK
+        cbar.set_label(r'$t$-test $\sigma$', fontsize=16)#, color='white')  ############ USED TO MAKE A BLACK PLOT WITH WHITE BORDERS
         # for spine in cbar.ax.spines.values():
         #     spine.set_edgecolor('white')
-        # cbar.ax.tick_params(colors='white')  ##################################################################
+        # cbar.ax.tick_params(colors='white')  ############
 
         ax[0].axhline(tr.Kp.value,color='r', linestyle=':', label='Planet Rest Frame')
         ax[0].axvline(0,color='r', linestyle=':')
         
-        # Position of tellurics
-        if tellu_loc is not None:
-            if tellu_loc >= RV_array[0] and tellu_loc <= RV_array[-1]:  # if the telluric are within the limits of the x axis
-                ax[0].axvline(tellu_loc, linestyle=":", alpha=0.85, color="saddlebrown")
-            else:
-                print("The telluric residuals are not located within the x axis limits of this plot")
-        
         fig.tight_layout(pad=1.0)
-        # fig.patch.set_facecolor('k') ####################### MATHIS CHANGE THIS BACK TO NORMAL
+        # fig.patch.set_facecolor('k') ############ USED TO MAKE A BLACK PLOT WITH WHITE BORDERS
         # ax[0].tick_params(colors='white')
         # ax[0].xaxis.label.set_color('white')
         # ax[0].yaxis.label.set_color('white')
         # for spine in ax[0].spines.values():
         #     spine.set_edgecolor('white')
-        # ax[0].title.set_color('white')  ####################
+        # ax[0].title.set_color('white')  ############
 
 
         if vrp is None:
@@ -1510,6 +1506,7 @@ def plot_ttest_map_hist(tr, corrRV, correlation, Kp_array, RV_array, sigma, ttes
 
         nf.t_test_hist(new_A, new_B, labelA, labelB, title1, ax[1])
         fig.tight_layout()
+        plt.show()
 
         if path_fig is not None:
             fig.savefig(path_fig+'fig_ttest{}.pdf'.format(fig_name))
@@ -1608,6 +1605,7 @@ def plot_ttest_map_hist(tr, corrRV, correlation, Kp_array, RV_array, sigma, ttes
 
 #         nf.t_test_hist(new_A, new_B, labelA, labelB, title1, ax[1])
         fig.tight_layout()
+        plt.show()
 
         if path_fig is not None:
             fig.savefig(path_fig+'fig_ttest_map{}.pdf'.format(fig_name))
@@ -2609,9 +2607,9 @@ def scatterplot_logl(flatten_sample, flatten_logl, n_max_pts=10000, tight_ylim=T
     return fig, ax
 
 
-def plot_raw_spectrum(observation, wv_range, visit_name, exp_idx=10, use_median=True, ylims=None):
+def plot_raw_spectrum(observation, wv_range, visit_name, use_median=True, exp_plot=10, compare_model=False, model_wav=None, model_spec=None, ylims=None):
     """
-    Plot 1D raw and telluric‑corrected spectra for a single night.
+    Plot 1D raw and telluric‑corrected spectra for a single night, with (optionally) the model as a backdrop.
 
     Parameters
     ----------
@@ -2621,12 +2619,17 @@ def plot_raw_spectrum(observation, wv_range, visit_name, exp_idx=10, use_median=
         Wavelength range (min_wl, max_wl), in microns, to display along the x‑axis.
     visit_name
         Name of the night of observation.
-    exp_idx
-        Index of the exposure to plot when use_median=False (default: 10).
-        Ignored if use_median=True.
     use_median
         If True (default), the median spectrum over all exposures is plotted.
-        If False, a single exposure given by exp_idx is plotted.
+        If False, a single exposure given by exp_plot is plotted.
+    exp_plot
+        Exposure to plot when use_median=False (default: 10).
+        Ignored if use_median=True.
+    compare_model
+        If True (default: False), model_wav and model_spec are plotted as a line.
+    model_wav, model_spec
+        Wavelength grid (µm) and spectrum (transit depth with minimum set at 0) to plot when compare_model is True.
+        They are interpolated to match the data wavelength grid.
     ylims
         y-axis range (ymin, ymax) for the plot.
         If None (default), the limits are based on the extent of the data.
@@ -2644,8 +2647,11 @@ def plot_raw_spectrum(observation, wv_range, visit_name, exp_idx=10, use_median=
     if wv_range[0] >= wv_range[1]:
         raise ValueError("wavelength_range must be (min, max) with min < max.")
 
-    if not use_median and not (0 <= exp_idx < observation.uncorr.shape[0]):
-        raise IndexError("exp_idx is out of bounds for the number of exposures.")
+    if not use_median and not (1 <= exp_plot < observation.uncorr.shape[0]):
+        raise IndexError("exp_plot is out of bounds for the number of exposures.")
+        
+    if compare_model and (model_wav is None or model_spec is None):
+        raise ValueError("model_wav and model_spec must be given when compare_model=True.")
 
     # -------------------- blaze‑function correction -------------------- #
     # Divide by the blaze to get a spectrum normalized at 1
@@ -2663,16 +2669,39 @@ def plot_raw_spectrum(observation, wv_range, visit_name, exp_idx=10, use_median=
         flux_uncorrected = np.concatenate([np.nanmedian(uncorrected_flux, axis=0)[i] for i in order_indices])
         flux_corrected = np.concatenate([np.nanmedian(observation.flux, axis=0)[i] for i in order_indices])
     else:
-        flux_uncorrected = np.concatenate([uncorrected_flux[exp_idx, i] for i in order_indices])
-        flux_corrected = np.concatenate([observation.flux[exp_idx, i] for i in order_indices])
+        flux_uncorrected = np.concatenate([uncorrected_flux[exp_plot - 1, i] for i in order_indices])
+        flux_corrected = np.concatenate([observation.flux[exp_plot - 1, i] for i in order_indices])
 
-    # --------------------------- plotting ------------------------------ #
-    mask = (wv_range[0] < wavelength) & (wavelength < wv_range[1])  # mask for wavelength range
-
+    # ----------------------- wavelength mask --------------------------- #
+    mask = (wv_range[0] < wavelength) & (wavelength < wv_range[1])
+    
+    # ---------------------------- plot --------------------------------- #
     fig, ax = plt.subplots(figsize=(11, 4))
-    ax.scatter(wavelength[mask], flux_uncorrected[mask], s=1.2, c="k", label="Uncorrected flux")
-    ax.scatter(wavelength[mask], flux_corrected[mask], s=1.2, c="#48ACF0", label="Telluric‑corrected flux")
+    ax.scatter(wavelength[mask], flux_uncorrected[mask], s=1.2, c="k", label="Uncorrected", zorder=3)
+    ax.scatter(wavelength[mask], flux_corrected[mask], s=1.2, c="#48ACF0", label="Telluric‑corrected",zorder=4)
+    
+    # --------------- optional model backdrop --------------------------- #
+    if compare_model:
+        # Mask model to requested wavelength range
+        model_mask = (wv_range[0] < model_wav) & (model_wav < wv_range[1])
+        model_wav_in = model_wav[model_mask]
+        model_spec_in = model_spec[model_mask]
 
+        # Scale to median of corrected data in same range, if possible
+        if len(model_spec_in) > 0 and np.isfinite(model_spec_in).any():
+            scale = np.nanmedian(flux_corrected[mask]) / np.nanmedian(model_spec_in)
+            model_spec_scaled = model_spec_in * scale
+        else:
+            model_spec_scaled = model_spec_in  # fallback
+        
+        if ylims is not None and np.max(model_spec_scaled) > ylims[1]:
+            # Rescale the model be within the y axis limits
+            model_spec_scaled /= (np.sort(model_spec_scaled)[-10] / ylims[1])
+
+        ax.plot(model_wav_in, model_spec_scaled, color="firebrick", linewidth=1, alpha=0.5,
+                label="Model (scaled)", zorder=0)
+
+    # --------------- labels, limits, legend ---------------------------- #
     ax.set_xlabel("Wavelength [μm]", fontsize=13)
     ax.set_ylabel("Flux", fontsize=13)
 
@@ -2680,7 +2709,7 @@ def plot_raw_spectrum(observation, wv_range, visit_name, exp_idx=10, use_median=
     if use_median:
         title = f"Raw spectrum: {visit_name} (median of exposures)"
     else:
-        title = f"Raw spectrum: {visit_name} (exposure {exp_idx})"
+        title = f"Raw spectrum: {visit_name} (exposure {exp_plot})"
     
     # Set limits for the y axis
     if ylims is not None:
@@ -2688,8 +2717,8 @@ def plot_raw_spectrum(observation, wv_range, visit_name, exp_idx=10, use_median=
     
     ax.set_title(title, fontsize=14)
     ax.legend(fontsize=12)
-    ax.tick_params(axis='both', which='major', labelsize=12)
+    ax.tick_params(axis='both', labelsize=12)
 
     plt.tight_layout()
     plt.show()
-
+    
