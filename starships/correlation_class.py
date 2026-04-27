@@ -135,6 +135,7 @@ class Correlations():
         self.logl0 = np.nansum( data[:, orders], axis=1)
         self.logl = corr.sum_logl( data, icorr, orders, N, alpha=alpha,
                                   axis=0, del_idx=index, nolog=nolog, **kwargs)
+
         
     def calc_logl_snr(self, n_pca=None, **kwargs):
 
@@ -935,7 +936,7 @@ class Correlations():
                 ccf = self.shifted_ccf
             elif kind == 'logl_corr':
                 ccf = np.ma.masked_invalid(np.ma.sum(self.data[:, orders], axis=1)).squeeze()
-                print(ccf.shape)
+                # print(ccf.shape)
 
             elif kind == "logl_sig":
                 nolog_L_sig = np.ma.masked_invalid(np.ma.sum(self.data[:, orders], axis=1)).squeeze()
@@ -967,9 +968,9 @@ class Correlations():
 #         print(ccf.mean())
         
         
-        
         return ccf
-   
+
+    
     def plot_PRF(self, tr, interp_grid=None, ccf=None, orders=None, RV=0., icorr=None, split_fig=[0], peak_center=None,
                      hlines=None, texts=None, kind='logl_corr', index=None, snr_1d=None, labels=None, clim=None, 
                      path_fig='', fig_name=None, extension='.pdf', id_pc=None, map_kind='snr', debug=False, remove_mean=False,
@@ -1141,7 +1142,7 @@ class Correlations():
                                          vmax=np.nanpercentile(z[i],99.9))
                 if index is not None:
                     idx_zero = np.where((z[i] == 0).all(axis=-1) == True)[0]
-                    print(idx_zero)
+                    # print(idx_zero)
                     if i == 0:
                         idx_end =idx_zero[-1]+1
                     else:
@@ -1149,7 +1150,7 @@ class Correlations():
                             idx_zero[-1]
                         else:
                             idx_end = idx_zero[-1]+1
-                    print(idx_zero[0],idx_end)
+                    # print(idx_zero[0],idx_end)
                     ax_map[i].pcolormesh(x, y[i][idx_zero[0]:idx_end], z[i][idx_zero[0]:idx_end] , 
                                      cmap='nipy_spectral_r', rasterized=True,)
                 try: 
@@ -1256,7 +1257,24 @@ class Correlations():
                 snr_1d = [self.snr]
 
         for i,snr_i in enumerate(snr_1d):
+            # Plot S/N vs Vrad
             ax_snr.plot(interp_grid, snr_i, label=labels[i])
+            
+            # RMS mask: exclude the region where the signal might be
+            RMSmask = (interp_grid < -10) | (interp_grid > 10)
+        
+            # Compute RMS
+            rms = np.sqrt(np.mean(np.square(snr_i[RMSmask])))
+        
+            # Add text aligned to top-right
+            ax_snr.text(
+                0.995, 0.98,
+                f"RMS = {rms:.2f}",
+                transform=ax_snr.transAxes,
+                ha='right',    # left-align text
+                va='top',     # anchor at top
+                fontsize=11
+            )
 
         ax_snr.set_xlabel(r'$v_{\rm rad}$ [km s$^{-1}$]', fontsize=16)
         ax_snr.axhline(0, linestyle=':', color='k', alpha=0.5)
@@ -1275,7 +1293,7 @@ class Correlations():
         ax_snr.tick_params(axis='both', which='major', labelsize=12)
 
 
-        fig.subplots_adjust(hspace=0.05, wspace=0.03)
+        fig.subplots_adjust(hspace=0.02, wspace=0.03)
         # fig.tight_layout()
         
         if fig_name is not None:
@@ -1288,9 +1306,9 @@ class Correlations():
             ymin = np.min(tr.phase)
             ymax = np.max(tr.phase)
             diff_y = [np.diff(y[i])[0] for i in range(len(split_fig))[:-1]]
-            print(ymin,ymax)
-            print(diff_y)
-            print(np.mean(diff_y))
+            # print(ymin,ymax)
+            # print(diff_y)
+            # print(np.mean(diff_y))
             
             
             common_y = np.arange(ymin,ymax,np.mean(diff_y))
@@ -1707,6 +1725,7 @@ class Correlations():
             print('In-transit t-val = {:.2f} / p-val {:.2e} / sig = {:.2f}'.format(t_in, p_in, nf.pval2sigma(p_in)))
             print('Out-of-transit t-val = {:.2f} / p-val {:.2e} / sig = {:.2f}'.format(t_out, p_out, nf.pval2sigma(p_out)))
         self.ttest_val = t_in
+
         
     def ttest_map(self, tr, kind='corr', vrp=None, orders=np.arange(49), 
                   kp0=0, RV_limit=100, kp_step=5, rv_step=1, RV=None, 
@@ -1765,6 +1784,8 @@ class Correlations():
         if Kp_array.size > 1 :
             self.plot_ttest_map(tr, vrp=vrp, kind=kind, orders=orders, fig_name=fig_name,
                                 cmap=cmap, hist=hist, path_fig=path_fig)
+
+        return None
         
         
         
@@ -1793,7 +1814,8 @@ class Correlations():
         (t_in, p_in), fig = pf.plot_ttest_map_hist(tr, self.rv_grid, ccf.copy(), Kp_array, RV_array, t_value, ttest_params,
                                orders=orders, plot_trail=False, masked=True, ccf=ccf.copy(),
                               vrp=vrp, RV=RV, fig_name=fig_name, path_fig=path_fig, hist=hist, cmap=cmap)
-        print(t_in, p_in, nf.pval2sigma(p_in))
+        # print(t_in, p_in, nf.pval2sigma(p_in))
+        
         return fig
         
         
@@ -1856,7 +1878,6 @@ def plot_ccf_timeseries(t, rv_star, correlation, plot_gauss=True, plot_spline=Tr
     #     ax[0].set_xlim(-2,2)
         ax[0].axvline(0, linestyle=':', alpha=0.5, color='k')
 
-    #     plt.figure()
         if plot_gauss is True:
             ax[1].errorbar(t.phase, pos_ga, yerr=pos_err_ga, marker='o')
         if plot_spline is True:

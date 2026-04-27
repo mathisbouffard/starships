@@ -669,11 +669,11 @@ def gen_rv_sequence(self, p, plot=False, K=None):
 
 
 def gen_transit_model(self, p, kind_trans, coeffs, ld_model, iin=False, plot=False):
+
     self.nu = o.t2trueanom(p.period, self.t.to(u.d), t0=p.t_peri, e=p.excent)
 
     rp, x, y, z, self.sep, p.bRstar = o.position(self.nu, e=p.excent, i=p.incl, w=p.w, omega=p.omega,
                                                  Rstar=p.R_star, P=p.period, ap=p.ap, Mp=p.M_pl, Mstar=p.M_star)
-
 
     self.phase = ((self.t - p.mid_tr) / p.period).decompose().value
     self.phase -= np.round(self.phase.mean())
@@ -693,8 +693,11 @@ def gen_transit_model(self, p, kind_trans, coeffs, ld_model, iin=False, plot=Fal
     i_peri = np.searchsorted(self.t, p.mid_tr)
 
     p.b = (p.bRstar / p.R_star).decompose()
+
+
     out, part, total = o.transit(p.R_star, p.R_pl + p.H, self.sep,
                                  z=z, nu=self.nu, r=np.array(rp.decompose()), i_tperi=i_peri, w=p.w)
+
     #         print(out,part,total)
 
     
@@ -1674,7 +1677,7 @@ class Planet():
         self.gp = const.G * self.M_pl / self.R_pl**2
 
 
-        # # - Paramètres atmosphériques approximatifs
+        # --- Paramètres atmosphériques approximatifs
         self.mu = 2.3 * const.u
         self.H = (const.k_B * self.Tp / (self.mu * self.gp)).decompose()
         self.all_params = parametres
@@ -2287,7 +2290,7 @@ def load_single_data_dict(path, filename, load_all=False, filename_end='', data_
     return data_trs
     
 
-def save_sequences(filename, list_tr, do_tr, path='', bad_indexs=None, save_all=False):
+def save_sequences(filename, list_tr, do_tr, path='', bad_indexs=None, save_all=False, print_out=True):
 
     filename = Path(filename)
     path = Path(path)
@@ -2296,7 +2299,10 @@ def save_sequences(filename, list_tr, do_tr, path='', bad_indexs=None, save_all=
         bad_indexs = []
 
     out_filename = Path(f'{filename.name}_data_info.npz')
-    print(path / out_filename)
+
+    if print_out:
+        print(path / out_filename)
+        
     np.savez(path / out_filename,
              trall_alpha_frac = list_tr[str(do_tr[-1])].alpha_frac,
              trall_icorr = list_tr[str(do_tr[-1])].icorr,
@@ -2306,8 +2312,10 @@ def save_sequences(filename, list_tr, do_tr, path='', bad_indexs=None, save_all=
 
     for i_tr, tr_key in enumerate(list(list_tr.keys())[:np.nonzero(np.array(do_tr) < 10)[0].size]):
         out_filename = Path(f'{filename.name}_data_trs_{i_tr}.npz')
+
         print(path / out_filename)
         print("-------------------------\n")
+        
         if save_all is False:
             np.savez(path / out_filename,
                  components_ = list_tr[tr_key].pca.components_,
@@ -2409,6 +2417,8 @@ def save_sequences(filename, list_tr, do_tr, path='', bad_indexs=None, save_all=
                  mask_recon_time = list_tr[tr_key].recon_time.mask,
                  bad_indexs=bad_indexs
                  )
+
+    return None
 
         
 def load_sequences(filename, do_tr, path='', load_all=False):
