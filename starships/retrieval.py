@@ -2178,11 +2178,6 @@ def prepare_abundances(theta_dict, mode=None, ref_linelists=None):
     # --- Prepare the abundances (with the correct linelist name for species)
     species = {lnlst: theta_dict[mol] for lnlst, mol
                in zip(ref_linelists, line_opacities)}
-
-    # --- Adding continuum opacities
-    for mol in continuum_opacities:
-        species[mol] = theta_dict[mol]
-
         
     # --- Adding continuum opacities
     for pairs in continuum_opacities:
