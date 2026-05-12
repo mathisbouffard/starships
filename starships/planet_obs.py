@@ -2423,11 +2423,13 @@ def save_sequences(filename, list_tr, do_tr, path='', bad_indexs=None, save_all=
         
 def load_sequences(filename, do_tr, path='', load_all=False):
 
-    filename = Path(filename)
-    path = Path(path)
+    # Combine and separate
+    full_path = path / filename
+    filename = Path(full_path).name
+    path = Path(full_path).parent
 
     if len(do_tr) > 1 :
-        out_filename = Path(f'{filename.name}_data_info.npz')
+        out_filename = Path(f'{filename}_data_info.npz')
         log.info(f'Reading: {path / out_filename}')
         data_info_file = np.load(path / out_filename)
         data_info = {}
@@ -2444,7 +2446,7 @@ def load_sequences(filename, do_tr, path='', load_all=False):
     for i_tr, tr_key in enumerate(do_tr[:np.nonzero(np.array(do_tr) < 10)[0].size]):
         data_trs[str(i_tr)] = {}
 
-        out_filename = Path(f'{filename.name}_data_trs_{i_tr}.npz')
+        out_filename = Path(f'{filename}_data_trs_{i_tr}.npz')
         log.info(f'Reading: {path / out_filename}')
         data_tr = np.load(path / out_filename)
 
@@ -2456,7 +2458,7 @@ def load_sequences(filename, do_tr, path='', load_all=False):
                 data_info['trall_N'] = data_tr['N']
                 data_info['bad_indexs'] = data_tr['bad_indexs']
             except KeyError:
-                out_filename = Path(f'{filename.name}_data_info.npz')
+                out_filename = Path(f'{filename}_data_info.npz')
                 log.info(f'Reading: {path / out_filename}')
                 data_info_file = np.load(path / out_filename)
                 data_info = {}

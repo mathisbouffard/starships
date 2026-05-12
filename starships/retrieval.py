@@ -5,69 +5,7 @@
 # ##################################################################
 # --------------------------------------------
 
-
-# import os
-# import sys
-
-# from pathlib  import Path
-# import numpy as np
-# import yaml
-
-# import logging
-# log = logging.getLogger(__name__)
-# log.setLevel(logging.INFO)
-# logging.basicConfig()
-
-# import emcee
-# import starships.spectrum as spectrum
-# from starships.orbite import rv_theo_t
-# from starships.mask_tools import interp1d_masked
-
-
-# # %%
-# interp1d_masked.iprint = False
-# import starships.correlation as corr
-# from starships.analysis import bands, resamp_model
-# import starships.planet_obs as pl_obs
-# from starships.planet_obs import Observations, Planet
-# import starships.petitradtrans_utils as prt
-# from starships.homemade import unpack_kwargs_from_command_line, pop_kwargs_with_message
-# from starships import retrieval_utils as ru
-
-# from starships.instruments import load_instrum
-
-
-# import astropy.units as u
-# import astropy.constants as const
-# from astropy.table import Table
-
-
-
-# from scipy.interpolate import interp1d
-
-# import warnings
-
-# warnings.simplefilter("ignore", UserWarning)
-# warnings.simplefilter("ignore", RuntimeWarning)
-
-# import gc
-
-# # from petitRADTRANS import nat_cst as nc
-# try:
-#     from petitRADTRANS.physics import guillot_global, guillot_modif
-# except ModuleNotFoundError:
-#     from petitRADTRANS.nat_cst import guillot_global, guillot_modif
-
-# # initialisation
-
-# ##############################################################################
-# # os.environ['OMP_NUM_THREADS'] = '2'
-# # print_var = os.environ['OMP_NUM_THREADS']
-# # print(f'OMP_NUM_THREADS = {print_var}')
-
-# from multiprocessing import Pool
-
-
+# (I removed the imports)
 
 
 
@@ -1655,7 +1593,7 @@ def setup_retrieval(input_parameters, **kwargs):
 
     return input_params
 
-# ONce the setup_retrieval function is run, all the parameters will be accessible in the global variables.
+# Once the setup_retrieval function is run, all the parameters will be accessible in the global variables.
 
 def get_wv_range(list_of_ranges):
     """Define the most effective wavelength range given a list of wavelenght ranges.
@@ -1730,10 +1668,11 @@ def load_high_res_data():
 
     data_info = {'trall_alpha_frac': [], 'trall_icorr': [], 'trall_N': [], 'bad_indexs': []}
     data_trs = []
-
+    
     for high_res_file_stem in high_res_file_stem_list:
         log.debug(f'Hires files stem: {high_res_path / high_res_file_stem}')
         log.info('Loading Hires files.')
+        
         data_info_i, data_trs_i = pl_obs.load_sequences(high_res_file_stem, do_tr, path=high_res_path)
         # Add index of the exposures where we expect to see the planet signal (to be used in kernel function)
         # trall_alpha_frac is the fraction of the total planet signal received during the exposure.
@@ -2388,6 +2327,11 @@ def lnprob(theta, ):
         logl_i = []
         # --- Computing the logL for all sequences
         for tr_i, data_tr_i in enumerate(data_trs):
+
+            if mid_tr_list is not None:  # mathis quick hack to allow specific mid-tr times for each night
+                mid_tr_i = [(mid_tr_list[tr_i])] * u.d
+            else:
+                mid_tr_i = planet.mid_tr
             
             # NOTE: Not optimal to re-compute the model for each sequence.
             # Could be done once for all regions and then the rotation kernel
@@ -2401,7 +2345,7 @@ def lnprob(theta, ):
                 return -np.inf
             
             vrp_orb = rv_theo_t(theta_dict['kp'],
-                                data_tr_i['t_start'] * u.d, planet.mid_tr,
+                                data_tr_i['t_start'] * u.d, mid_tr_i,  # mathis (replaced planet.mid_tr by mid_tr_i)
                                 planet.period, plnt=True).value
 
             args = (theta_dict['rv'], data_tr_i, planet, wv_high, model_high)
@@ -2593,7 +2537,7 @@ def prepare_run(yaml_file=None, **kwargs):
             log.info("log likelihood function is indeed working! Success!")
             break
     else:
-        log.warning("log likelihood function test was not successful... (sad face)")
+        log.warning("log likelihood function test was not successful... (´•︵•`)")
 
     # Add index to the file name if slurm array is used in sbatch
     if 'SLURM_ARRAY_TASK_ID' in os.environ:

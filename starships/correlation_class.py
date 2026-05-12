@@ -1071,8 +1071,9 @@ class Correlations():
             for i in range(len(split_fig))[1:][::-1]:
 
                 id_range.append([split_fig[i-1],split_fig[i]])
-    #             print(id_range)
+                
                 y.append(tr.phase[split_fig[i-1]:split_fig[i]]) #np.arange(tr.n_spec)[:split_fig]
+                
                 if map_kind == 'snr':
                     ccf_i = ccf[split_fig[i - 1]:split_fig[i]]
                     # std_i = np.nanstd(ccf[:, idx_bruit_rv][split_fig[i - 1]:split_fig[i]], axis=-1)
@@ -1085,15 +1086,19 @@ class Correlations():
                     #          np.nanstd(ccf[:,idx_bruit_rv][split_fig[i-1]:split_fig[i]], axis=-1)[:,None]))
                     # print(ccf[split_fig[i-1]:split_fig[i]].shape)
                     # print(np.nanstd(ccf[:,idx_bruit_rv][split_fig[i-1]:split_fig[i]]).shape)
-                    # print()
+                    
                 if map_kind == 'curve':
                     z.append(ccf[split_fig[i-1]:split_fig[i]])
+                
         else:
             y=tr.phase  #np.arange(split_fig, tr.n_spec)-split_fig
+            
             if map_kind == 'snr':
                 z=ccf/np.nanstd(ccf[:,idx_bruit_rv])
+                
             if map_kind == 'curve':
                 z=ccf
+            
 
         idx_mid = hm.nearest(interp_grid, RV)        
         # colum3 = np.ma.mean(ccf[:,idx_mid-1:idx_mid+2]/np.nanstd(ccf[:,idx_bruit_rv]),axis=-1)
@@ -1152,7 +1157,7 @@ class Correlations():
                             idx_end = idx_zero[-1]+1
                     # print(idx_zero[0],idx_end)
                     ax_map[i].pcolormesh(x, y[i][idx_zero[0]:idx_end], z[i][idx_zero[0]:idx_end] , 
-                                     cmap='nipy_spectral_r', rasterized=True,)
+                                     cmap='nipy_spectral_r', rasterized=True)
                 try: 
                     id_out = tr.iOut[(tr.iOut>=id_range[i][0]) & (tr.iOut<id_range[i][1])]-id_range[i][0]
                     ax_map[i].plot(np.ones_like(y[i])[id_out]*RV, y[i][id_out],
@@ -1178,9 +1183,9 @@ class Correlations():
             
         else:
             ax_map.set_ylabel(r'Orbital Phase', fontsize=16)
-            im = ax_map.pcolormesh(x, y, z , cmap=cmap, rasterized=True)
+            im = ax_map.pcolormesh(x, y, z , cmap=cmap, rasterized=True)  # mathis test
             ax_map.plot(np.ones_like(y)[tr.iOut]*RV, y[tr.iOut],'k.', alpha=0.5, label="Out of transit observations")
-            ax_map.axvline(0, linestyle=':', color='black', alpha=0.8, label="$V_{rad}$ = 0")
+            ax_map.axvline(0, linestyle=':', color='black', alpha=0.8, label="$v_{rad}$ = 0")
             
             if tr.n_spec >= 2 * len(tr.filenames):  # if the tr object consists of more than 1 night (twice more exposures than in any of the nights)
                 if minus_kp is False:
@@ -2005,22 +2010,3 @@ def plot_ccflogl(tr, ccf_map, logl_map, corrRV0, Kp_array, n_pcas,
                                                     fig_name=label, path_fig=path_fig)
     return ccf_obj, logl_obj
 
-# def plot_ccflogl_test(t, ccf_map, logl_map, n_pcas, corrRV0, indexs, Kp_array, RV=0.0, orders=np.arange(49)):
-#     ccf_obj = Correlations(ccf_map, kind="logl", rv_grid=corrRV0,
-#                                  n_pcas=n_pcas, kp_array=Kp_array)
-#     ccf_obj.calc_logl(t, orders=orders, index=indexs, N=None, nolog=False, icorr=t.iIn)
-#     ccf_obj.plot_multi_npca(RV_sys=RV, title='CCF SNR')
-#
-#     logl_obj = Correlations(logl_map, kind="logl", rv_grid=corrRV0,
-#                                   n_pcas=n_pcas, kp_array=Kp_array)
-#     logl_obj.calc_logl(t, orders=orders, index=indexs, N=t.N, nolog=True,  icorr=t.iIn)
-#     # logl_obj.plot_multi_npca(RV_sys=t1.RV_sys, title='logL SNR')
-#
-#     logl_obj.plot_multi_npca(RV_sys=RV, kind='courbe', kind_courbe='abs', title='logL abs')
-#     logl_obj.plot_multi_npca(RV_sys=RV, kind='courbe', kind_courbe='bic',
-#                                   title=r'$\log_{10} \Delta$ BIC')
-#
-#     print(ccf_obj.npc_val)
-#     print(logl_obj.npc_max_abs)
-#     print(logl_obj.npc_bic)
-#     print(2*(logl_obj.npc_max_abs-logl_obj.npc_max_abs[0]))
