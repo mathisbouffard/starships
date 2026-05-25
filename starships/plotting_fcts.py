@@ -2627,9 +2627,9 @@ def scatterplot_logl(flatten_sample, flatten_logl, n_max_pts=10000, tight_ylim=T
     return fig, ax
 
 
-def plot_raw_spectrum(observation, wv_range, visit_name, use_median=True, exp_plot=10, compare_model=False, model_wav=None, model_spec=None, ylims=None):
+def plot_raw_spectrum(observation, wv_range, visit_name, use_median=True, exp_plot=10, ylims=None):
     """
-    Plot 1D raw and telluric‑corrected spectra for a single night, with (optionally) the model as a backdrop.
+    Plot 1D raw and telluric‑corrected spectra for a single night.
 
     Parameters
     ----------
@@ -2645,11 +2645,6 @@ def plot_raw_spectrum(observation, wv_range, visit_name, use_median=True, exp_pl
     exp_plot
         Exposure to plot when use_median=False (default: 10).
         Ignored if use_median=True.
-    compare_model
-        If True (default: False), model_wav and model_spec are plotted as a line.
-    model_wav, model_spec
-        Wavelength grid (µm) and spectrum (transit depth with minimum set at 0) to plot when compare_model is True.
-        They are interpolated to match the data wavelength grid.
     ylims
         y-axis range (ymin, ymax) for the plot.
         If None (default), the limits are based on the extent of the data.
@@ -2669,9 +2664,6 @@ def plot_raw_spectrum(observation, wv_range, visit_name, use_median=True, exp_pl
 
     if not use_median and not (1 <= exp_plot < observation.uncorr.shape[0]):
         raise IndexError("exp_plot is out of bounds for the number of exposures.")
-        
-    if compare_model and (model_wav is None or model_spec is None):
-        raise ValueError("model_wav and model_spec must be given when compare_model=True.")
 
     # -------------------- blaze‑function correction -------------------- #
     # Divide by the blaze to get a spectrum normalized at 1
@@ -2699,27 +2691,6 @@ def plot_raw_spectrum(observation, wv_range, visit_name, use_median=True, exp_pl
     fig, ax = plt.subplots(figsize=(11, 4))
     ax.scatter(wavelength[mask], flux_uncorrected[mask], s=1.2, c="k", label="Uncorrected", zorder=3)
     ax.scatter(wavelength[mask], flux_corrected[mask], s=1.2, c="#48ACF0", label="Telluric‑corrected",zorder=4)
-    
-    # --------------- optional model backdrop --------------------------- #
-    if compare_model:
-        # Mask model to requested wavelength range
-        model_mask = (wv_range[0] < model_wav) & (model_wav < wv_range[1])
-        model_wav_in = model_wav[model_mask]
-        model_spec_in = model_spec[model_mask]
-
-        # Scale to median of corrected data in same range, if possible
-        if len(model_spec_in) > 0 and np.isfinite(model_spec_in).any():
-            scale = np.nanmedian(flux_corrected[mask]) / np.nanmedian(model_spec_in)
-            model_spec_scaled = model_spec_in * scale
-        else:
-            model_spec_scaled = model_spec_in  # fallback
-        
-        if ylims is not None and np.max(model_spec_scaled) > ylims[1]:
-            # Rescale the model be within the y axis limits
-            model_spec_scaled /= (np.sort(model_spec_scaled)[-10] / ylims[1])
-
-        ax.plot(model_wav_in, model_spec_scaled, color="firebrick", linewidth=1, alpha=0.5,
-                label="Model (scaled)", zorder=0)
 
     # --------------- labels, limits, legend ---------------------------- #
     ax.set_xlabel("Wavelength [μm]", fontsize=13)
