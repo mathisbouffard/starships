@@ -594,6 +594,9 @@ def build_trans_spectrum4(wave, flux, berv, RV_sys, vr, iOut,
     else:
         if flux_norm is None:
             flux_norm = clean_bad_pixels_time(np.mean(wave,axis=0), flux, tresh=tresh)#, plot=False, , tresh_lim=tresh_lim)
+    
+    flux_norm = np.ma.masked_invalid(flux_norm)  # make sure the array has no NaNs that aren't masked
+    
     if mask_var is True:
         hm.print_static('Masking high variance pixels (quick fix for OH lines).\n')
         new_mask = [ext.get_mask_noise(f, tresh, tresh_lim, gwidth=0.01, poly_ord=5) for f in flux_norm.swapaxes(0, 1)]
