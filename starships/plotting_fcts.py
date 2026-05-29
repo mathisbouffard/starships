@@ -2800,12 +2800,20 @@ def calculate_KpVsys_map(OBS_OBJECT, CCF_OBJECT, method, rv_grid, kp_grid, box_K
 
     KpVsys_map = np.zeros((len(Kp_list), len(vsys_list)))  # Output map
 
-    phi_min = -0.02
-    phi_max = 0.02
-    mask = ((phases > phi_min) & (phases < phi_max))
-    idx = np.where(mask == True)[0][0]
-
-    selected_phases = phases[mask]
+    if OBS_OBJECT.kind_trans == 'transmission':
+        selected_phases = OBS_OBJECT.phase[OBS_OBJECT.iIn]
+        idx = OBS_OBJECT.iIn[0]
+    else:
+        raise NotImplementedError("Emission has not been implemented for this function yet.")
+    
+        # Below is the code that was used before instead of this if/else block.
+        # This or the transmission code could be adapted to emission.
+        
+        # phi_min = -0.02
+        # phi_max = 0.02
+        # mask = ((phases > phi_min) & (phases < phi_max))
+        # idx = np.where(mask == True)[0][0]
+        # selected_phases = phases[mask]
 
     ######################################
     # 3. Fill Kp vs. Vsys map

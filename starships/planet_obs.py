@@ -705,8 +705,8 @@ def gen_transit_model(self, p, kind_trans, coeffs, ld_model, iin=False, plot=Fal
     if kind_trans == 'transmission':
         # print('Transmission')
         self.iOut = out
-        self.part = part
-        self.total = total
+        self.part = part    # partial transit
+        self.total = total  # total transit
         self.iIn = np.sort(np.concatenate([part, total]))
     #             print(self.iIn.size, self.iOut.size)
 
